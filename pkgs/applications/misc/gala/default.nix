@@ -1,52 +1,44 @@
 # SPDX-FileCopyrightText: 2022 Unikie
 
-{ lib, stdenv,
-gtk3, atk, glib, pango, gdk-pixbuf, cairo, freetype, fontconfig, dbus,
-libXi, libXcursor, libXdamage, libXrandr, libXcomposite, libXext, libXfixes, libxcb,
-libXrender, libX11, libXtst, libXScrnSaver, nss, nspr, alsa-lib, cups, expat, udev, libpulseaudio,
-at-spi2-atk, at-spi2-core, libxshmfence, libdrm, libxkbcommon, mesa, unzip
-}:
+{ pkgs, nodejs, stdenv, fetchFromGitHub, lib, ... }:
 
 let
-  dynamic-linker = stdenv.cc.bintools.dynamicLinker;
+  # src = fetchFromGitHub {
+  #   owner = "solita";
+  #   repo = "tii-saca-ga-la";
+  #   rev = "5492cfeeda15fb3205d344f0dc0396f8e7aa798f";
+  # };
 
-  libPath = lib.makeLibraryPath [
-    stdenv.cc.cc gtk3 atk glib pango gdk-pixbuf cairo freetype fontconfig dbus
-    libXi libXcursor libXdamage libXrandr libXcomposite libXext libXfixes libxcb
-    libXrender libX11 libXtst libXScrnSaver nss nspr alsa-lib cups expat udev libpulseaudio
-    at-spi2-atk at-spi2-core libxshmfence libdrm libxkbcommon mesa
-  ];
+  src = ./tii-saca-ga-la.zip;
+  # nodejs-14_x
 
-in stdenv.mkDerivation rec {
-  name = "gala";
+  nodePackages = import ./node-composition.nix
+  {
+    inherit pkgs;
+    inherit (stdenv.hostPlatform) system;
+    nodejs = pkgs."nodejs-14_x";
+  };
 
-  nativeBuildInputs = [ unzip ];
+in
+nodePackages.package.override {
+  pname = "gala";
+  version = "0.0.1";
 
-  buildInputs = [ unzip ];
+  inherit src;
 
-  src = ./dev.scpp.saca.gala-0.0.1.zip;
-  phases = "unpackPhase fixupPhase";
-  targetPath = "$out/gala";
-  intLibPath = "$out/gala/swiftshader";
+  nativeBuildInputs = [ pkgs.buildPackages.makeWrapper ];
 
-  unpackPhase = ''
-    mkdir -p ${targetPath}
-    unzip $src -d ${targetPath}
+  preInstall = ''
+    echo "PRE INSTALL"
   '';
 
-  rpath = lib.concatStringsSep ":" [
-    libPath
-    targetPath
-    intLibPath
-  ];
-
-  fixupPhase = ''
-    patchelf \
-      --set-interpreter "${dynamic-linker}" \
-      --set-rpath "${rpath}" \
-      ${targetPath}/dev.scpp.saca.gala
-
-    mkdir -p $out/bin
-    ln -s $out/gala/dev.scpp.saca.gala $out/bin/gala
+  postInstall = ''
+    echo "POST INSTALL"
   '';
+
+  meta = with lib; {
+    description = "GALA app";
+    maintainers = with maintainers; [ beardhatcode ];
+    license = licenses.asl20;
+  };
 }

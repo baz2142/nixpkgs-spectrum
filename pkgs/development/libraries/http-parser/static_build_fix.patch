@@ -1,0 +1,56 @@
+diff --git a/Makefile b/Makefile
+index 5d21221..3d96192 100644
+--- a/Makefile
++++ b/Makefile
+@@ -21,6 +21,7 @@
+ PLATFORM ?= $(shell sh -c 'uname -s | tr "[A-Z]" "[a-z]"')
+ HELPER ?=
+ BINEXT ?=
++STATIC_LIBNAME = libhttp_parser.a
+ SOLIBNAME = libhttp_parser
+ SOMAJOR = 2
+ SOMINOR = 9
+@@ -72,6 +73,12 @@ else
+ LDFLAGS_LIB += -Wl,-soname=$(SONAME)
+ endif
+ 
++ifdef STATIC
++	INSTALL_DEP = package
++else
++	INSTALL_DEP = library
++endif
++
+ test: test_g test_fast
+ 	$(HELPER) ./test_g$(BINEXT)
+ 	$(HELPER) ./test_fast$(BINEXT)
+@@ -113,7 +120,7 @@ library: libhttp_parser.o
+ 	$(CC) $(LDFLAGS_LIB) -o $(LIBNAME) $<
+ 
+ package: http_parser.o
+-	$(AR) rcs libhttp_parser.a http_parser.o
++	$(AR) rcs ${STATIC_LIBNAME} http_parser.o
+ 
+ url_parser: http_parser.o contrib/url_parser.c
+ 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) $^ -o $@
+@@ -130,11 +137,19 @@ parsertrace_g: http_parser_g.o contrib/parsertrace.c
+ tags: http_parser.c http_parser.h test.c
+ 	ctags $^
+ 
+-install: library
+-	$(INSTALL) -D  http_parser.h $(DESTDIR)$(INCLUDEDIR)/http_parser.h
++install: ${INSTALL_DEP}
++ifdef STATIC
++	@echo "Installing static"
++	$(INSTALL) -D http_parser.h $(DESTDIR)$(INCLUDEDIR)/http_parser.h
++	$(INSTALL) -D ${STATIC_LIBNAME} $(DESTDIR)$(LIBDIR)/${STATIC_LIBNAME}
++	ln -sf ${STATIC_LIBNAME} $(DESTDIR)$(LIBDIR)/${STATIC_LIBNAME}
++else
++	@echo "Installing dynamic"
++	$(INSTALL) -D http_parser.h $(DESTDIR)$(INCLUDEDIR)/http_parser.h
+ 	$(INSTALL) -D $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME)
+ 	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+ 	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
++endif
+ 
+ install-strip: library
+ 	$(INSTALL) -D  http_parser.h $(DESTDIR)$(INCLUDEDIR)/http_parser.h

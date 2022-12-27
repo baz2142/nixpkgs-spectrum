@@ -13,7 +13,7 @@ stdenv.mkDerivation rec {
 
   NIX_CFLAGS_COMPILE = "-Wno-error";
   patches = [
-    ./build-shared.patch
+    ./static_build_fix.patch
   ] ++ lib.optionals stdenv.isAarch32 [
     # https://github.com/nodejs/http-parser/pull/510
     (fetchpatch {
@@ -22,7 +22,8 @@ stdenv.mkDerivation rec {
     })
   ];
   makeFlags = [ "DESTDIR=" "PREFIX=$(out)" ];
-  buildFlags = [ "library" ];
+  buildFlags = [ "package STATIC=1" ];
+  installFlags = [ "STATIC=1" ];
   doCheck = true;
   checkTarget = "test";
 
